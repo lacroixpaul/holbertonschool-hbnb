@@ -1,0 +1,60 @@
+# Ignore compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Ignore environment configuration files
+.env
+*.env
+venv/
+.venv/
+
+# Ignore editor-specific files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+*.sublime-workspace
+*.sublime-project
+
+# Ignore dependency and package files
+node_modules/
+package-lock.json
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Ignore temporary UML & Mermaid.js files
+*.drawio
+*.mmd~
+*.bak
+mermaid-diagrams-output/
+
+# Ignore documentation-related temporary files
+*.aux
+*.toc
+*.out
+*.pdf~
+
+# Ignore application-generated outputs
+instance/
+logs/
+coverage/
+htmlcov/
+*.sqlite3
+db.sqlite3
+
+# Ignore generated documentation files
+*.docx
+*.pdf
+*.odt
+*.xlsx
+
+# Ignore Docker-related files (if applicable)
+docker-compose.override.yml
+*.tar
+
+# Ignore Git-related files
+.git/
+.gitignore~
