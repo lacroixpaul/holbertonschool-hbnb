@@ -1,28 +1,14 @@
+from app import db
 from .basemodel import BaseModel
 
 class Amenity(BaseModel):
-	def __init__(self, name):
-		super().__init__()	
-		self.name = name
+    __tablename__ = 'amenities'  # ✅ Define the table name
 
-	@property
-	def name(self):
-		return self.__name
+    name = db.Column(db.String(50), nullable=False, unique=True)  # ✅ Unique amenity name
 
-	@name.setter
-	def name(self, value):
-		if not isinstance(value, str):
-			raise TypeError("Name must be a string")
-		if not value:
-			raise ValueError("Name cannot be empty")
-		super().is_max_length('Name', value, 50)
-		self.__name = value
-
-	def update(self, data):
-		return super().update(data)
-	
-	def to_dict(self):
-		return {
-			'id': self.id,
-			'name': self.name
-		}
+    def to_dict(self):
+        """Convert Amenity object to dictionary."""
+        return {
+            'id': self.id,
+            'name': self.name
+        }

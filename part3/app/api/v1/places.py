@@ -25,7 +25,7 @@ place_model = api.model('Place', {
     'longitude': fields.Float(required=True, description='Longitude of the place'),
     'owner_id': fields.String(required=True, description='ID of the owner'),
     'owner': fields.Nested(user_model, description='Owner details'),
-    'amenities': fields.List(fields.String, required=True, description="List of amenities ID's")
+    'amenities': fields.List(fields.String, required=True, description="List of amenities IDs")
 })
 
 @api.route('/')
@@ -36,14 +36,15 @@ class PlaceList(Resource):
     def post(self):
         """Register a new place"""
         place_data = api.payload
-        owner = place_data.get('owner_id', None)
+        owner_id = place_data.get('owner_id')
 
-        if owner is None or len(owner) == 0:
-            return {'error': 'Invalid input data.'}, 400
+        if not owner_id:
+            return {'error': 'Owner ID is required.'}, 400
 
-        user = facade.user_repo.get_by_attribute('id', owner)
+        user = facade.get_user(owner_id)
         if not user:
-            return {'error': 'Invalid input data'}, 400
+            return {'error': 'Owner not found'}, 400
+
         try:
             new_place = facade.create_place(place_data)
             return new_place.to_dict(), 201
@@ -53,7 +54,7 @@ class PlaceList(Resource):
     @api.response(200, 'List of places retrieved successfully')
     def get(self):
         """Retrieve a list of all places"""
-        places = facade.get_all_places()
+        places = facade.get_places()
         return [place.to_dict() for place in places], 200
 
 @api.route('/<place_id>')
@@ -77,6 +78,7 @@ class PlaceResource(Resource):
         place = facade.get_place(place_id)
         if not place:
             return {'error': 'Place not found'}, 404
+
         try:
             facade.update_place(place_id, place_data)
             return {'message': 'Place updated successfully'}, 200
@@ -90,21 +92,28 @@ class PlaceAmenities(Resource):
     @api.response(404, 'Place not found')
     @api.response(400, 'Invalid input data')
     def post(self, place_id):
+        """Add amenities to a place"""
         amenities_data = api.payload
-        if not amenities_data or len(amenities_data) == 0:
+
+        if not amenities_data or not isinstance(amenities_data, list):
             return {'error': 'Invalid input data'}, 400
-        
+
         place = facade.get_place(place_id)
         if not place:
             return {'error': 'Place not found'}, 404
-        
+
+        # Ensure all amenities exist before adding
+        amenities_to_add = []
         for amenity in amenities_data:
             a = facade.get_amenity(amenity['id'])
             if not a:
-                return {'error': 'Invalid input data'}, 400
-        
-        for amenity in amenities_data:
+                return {'error': f"Amenity {amenity['id']} not found"}, 400
+            amenities_to_add.append(a)
+
+        # Add the valid amenities
+        for amenity in amenities_to_add:
             place.add_amenity(amenity)
+
         return {'message': 'Amenities added successfully'}, 200
 
 @api.route('/<place_id>/reviews/')
@@ -117,4 +126,3 @@ class PlaceReviewList(Resource):
         if not place:
             return {'error': 'Place not found'}, 404
         return [review.to_dict() for review in place.reviews], 200
-    
