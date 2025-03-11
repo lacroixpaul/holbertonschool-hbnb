@@ -1,83 +1,49 @@
+from app import db, bcrypt
 from .basemodel import BaseModel
 import re
+from sqlalchemy.orm import validates
 
 class User(BaseModel):
-    emails = set()
+    __tablename__ = 'users'
 
-    def __init__(self, first_name, last_name, email, is_admin=False):
-        super().__init__()
-        self.first_name = first_name
-        self.last_name = last_name
-        self.email = email
-        self.is_admin = is_admin
-        self.places = []
-        self.reviews = []
-    
-    @property
-    def first_name(self):
-        return self.__first_name
-    
-    @first_name.setter
-    def first_name(self, value):
-        if not isinstance(value, str):
-            raise TypeError("First name must be a string")
-        super().is_max_length('First name', value, 50)
-        self.__first_name = value
+    first_name = db.Column(db.String(50), nullable=False)
+    last_name = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(120), nullable=False, unique=True)
+    password = db.Column(db.String(128), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
 
-    @property
-    def last_name(self):
-        return self.__last_name
+    def hash_password(self, password):
+        """Hash the password before storing it."""
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
 
-    @last_name.setter
-    def last_name(self, value):
-        if not isinstance(value, str):
-            raise TypeError("Last name must be a string")
-        super().is_max_length('Last name', value, 50)
-        self.__last_name = value
+    def verify_password(self, password):
+        """Verify if the given password matches the stored hash."""
+        return bcrypt.check_password_hash(self.password, password)
 
-    @property
-    def email(self):
-        return self.__email
-
-    @email.setter
-    def email(self, value):
-        if not isinstance(value, str):
+    @validates('email')
+    def validate_email(self, key, email):
+        """Validate the email format before storing it."""
+        if not isinstance(email, str):
             raise TypeError("Email must be a string")
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", value):
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
             raise ValueError("Invalid email format")
-        if value in User.emails:
-            raise ValueError("Email already exists")
-        if hasattr(self, "_User__email"):
-            User.emails.discard(self.__email)
-        self.__email = value
-        User.emails.add(value)
+        return email
 
-    @property
-    def is_admin(self):
-        return self.__is_admin
-    
-    @is_admin.setter
-    def is_admin(self, value):
-        if not isinstance(value, bool):
-            raise TypeError("Is Admin must be a boolean")
-        self.__is_admin = value
-
-    def add_place(self, place):
-        """Add an amenity to the place."""
-        self.places.append(place)
-
-    def add_review(self, review):
-        """Add an amenity to the place."""
-        self.reviews.append(review)
-
-    def delete_review(self, review):
-        """Add an amenity to the place."""
-        self.reviews.remove(review)
+    @validates('first_name', 'last_name')
+    def validate_name(self, key, value):
+        """Validate the first name and last name length before storing."""
+        if not isinstance(value, str):
+            raise TypeError(f"{key.replace('_', ' ').title()} must be a string")
+        if len(value) > 50:
+            raise ValueError(f"{key.replace('_', ' ').title()} must be at most 50 characters")
+        return value
 
     def to_dict(self):
+        """Convert the User object to a dictionary."""
         return {
             'id': self.id,
             'first_name': self.first_name,
             'last_name': self.last_name,
-            'email': self.email
+            'email': self.email,
+            'is_admin': self.is_admin
         }
