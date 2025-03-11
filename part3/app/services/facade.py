@@ -1,5 +1,6 @@
-from app.persistence.repository import InMemoryRepository
 from app.persistence.repository import SQLAlchemyRepository
+from app.persistence.user_repository import UserRepository
+from app import bcrypt
 from app.models.user import User
 from app.models.amenity import Amenity
 from app.models.place import Place
@@ -7,16 +8,19 @@ from app.models.review import Review
 
 class HBnBFacade:
     def __init__(self):
-        self.user_repo = SQLAlchemyRepository(User)
+        self.user_repository = UserRepository()
         self.place_repo = SQLAlchemyRepository(Place)
         self.review_repo = SQLAlchemyRepository(Review)
         self.amenity_repo = SQLAlchemyRepository(Amenity)
 
     # USER
     def create_user(self, user_data):
-        user = User(**user_data)
-        self.user_repository.add(user)
-        return user
+        """Creates a new user and hashes the password before saving."""
+        if 'password' not in user_data or not user_data['password']:
+            raise ValueError("Password is required")
+
+        user_data['password'] = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
+        return self.user_repository.create_user(user_data)
     
     def get_users(self):
         return self.user_repository.get_all()
