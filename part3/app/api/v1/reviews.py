@@ -19,19 +19,26 @@ class ReviewList(Resource):
     def post(self):
         """Register a new review"""
         review_data = api.payload
-        place = facade.get_place(review_data['place_id'])
-        if not place:
-            return {'error': 'Place not found'}, 400
         user = facade.get_user(review_data['user_id'])
-        if not user:
-            return {'error': 'User not found'}, 400
-        if place.owner.id == user.id:
+        place = facade.get_place(review_data['place_id'])
+
+        if not user or not place:
+            return {'error': 'Invalid User or Place ID'}, 400
+
+        if place.owner_id == user.id:
             return {'error': 'User cannot review their own place'}, 400
+
         try:
             new_review = facade.create_review(review_data)
             return new_review.to_dict(), 201
         except Exception as e:
             return {'error': str(e)}, 400
+
+    @api.response(200, 'List of reviews retrieved successfully')
+    def get(self):
+        """Retrieve a list of all reviews"""
+        return [review.to_dict() for review in facade.get_all_reviews()], 200
+
 
     @api.response(200, 'List of reviews retrieved successfully')
     def get(self):

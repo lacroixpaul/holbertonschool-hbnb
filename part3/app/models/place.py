@@ -1,88 +1,29 @@
+from app import db
 from .basemodel import BaseModel
-from .user import User
+from sqlalchemy.orm import relationship
 
 class Place(BaseModel):
-    def __init__(self, title, price, latitude, longitude, owner, description=None):
-        super().__init__()
-        self.title = title
-        self.description = description
-        self.price = price
-        self.latitude = latitude
-        self.longitude = longitude
-        self.owner = owner
-        self.reviews = []  # List to store related reviews
-        self.amenities = []  # List to store related amenities
+    __tablename__ = 'places'
 
-    @property
-    def title(self):
-        return self.__title
-    
-    @title.setter
-    def title(self, value):
-        if not value:
-            raise ValueError("Title cannot be empty")
-        if not isinstance(value, str):
-            raise TypeError("Title must be a string")
-        super().is_max_length('title', value, 100)
-        self.__title = value
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    price = db.Column(db.Float, nullable=False)
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    owner_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
 
-    @property
-    def price(self):
-        return self.__price
+    owner = db.relationship("User", backref="places")
+    amenities = db.relationship("Amenity", secondary="place_amenity", backref="places")
     
-    @price.setter
-    def price(self, value):
-        if not isinstance(value, float) and not isinstance(value, int):
-            raise TypeError("Price must be a float")
-        if value < 0:
-            raise ValueError("Price must be positive.")
-        self.__price = value
-
-    @property
-    def latitude(self):
-        return self.__latitude
-    
-    @latitude.setter
-    def latitude(self, value):
-        if not isinstance(value, float):
-            raise TypeError("Latitude must be a float")
-        super().is_between("latitude", value, -90, 90)
-        self.__latitude = value
-    
-    @property
-    def longitude(self):
-        return self.__longitude
-    
-    @longitude.setter
-    def longitude(self, value):
-        if not isinstance(value, float):
-            raise TypeError("Longitude must be a float")
-        super().is_between("longitude", value, -180, 180)
-        self.__longitude = value
-
-    @property
-    def owner(self):
-        return self.__owner
-    
-    @owner.setter
-    def owner(self, value):
-        if not isinstance(value, User):
-            raise TypeError("Owner must be a user instance")
-        self.__owner = value
-
-    def add_review(self, review):
-        """Add a review to the place."""
-        self.reviews.append(review)
-    
-    def delete_review(self, review):
-        """Add an amenity to the place."""
-        self.reviews.remove(review)
-
-    def add_amenity(self, amenity):
-        """Add an amenity to the place."""
-        self.amenities.append(amenity)
+    reviews = db.relationship(
+        "Review",
+        back_populates="place",
+        cascade="all, delete-orphan",
+        primaryjoin="Place.id == Review.place_id"
+    )
 
     def to_dict(self):
+        """Convert Place object to dictionary."""
         return {
             'id': self.id,
             'title': self.title,
@@ -90,10 +31,11 @@ class Place(BaseModel):
             'price': self.price,
             'latitude': self.latitude,
             'longitude': self.longitude,
-            'owner_id': self.owner.id
+            'owner_id': self.owner_id
         }
-    
+
     def to_dict_list(self):
+        """Convert Place object including owner, amenities, and reviews."""
         return {
             'id': self.id,
             'title': self.title,
@@ -102,6 +44,6 @@ class Place(BaseModel):
             'latitude': self.latitude,
             'longitude': self.longitude,
             'owner': self.owner.to_dict(),
-            'amenities': self.amenities,
-            'reviews': self.reviews
+            'amenities': [amenity.to_dict() for amenity in self.amenities],
+            'reviews': [review.to_dict() for review in self.reviews]
         }
