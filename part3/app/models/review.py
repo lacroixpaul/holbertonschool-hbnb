@@ -1,5 +1,6 @@
 from app import db
 from .basemodel import BaseModel
+from sqlalchemy.orm import validates
 
 class Review(BaseModel):
     __tablename__ = 'reviews'
@@ -11,6 +12,13 @@ class Review(BaseModel):
 
     place = db.relationship("Place", back_populates="reviews")
     user = db.relationship("User", backref="reviews")
+
+    @validates('rating')
+    def validate_rating(self, key, value):
+        """Vérifie que le rating est entre 1 et 5."""
+        if not (1 <= value <= 5):
+            raise ValueError("Rating must be between 1 and 5")
+        return value
 
     def to_dict(self):
         """Convert Review object to dictionary."""
