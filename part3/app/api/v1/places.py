@@ -68,13 +68,20 @@ class PlaceResource(Resource):
     @api.response(200, 'Place updated successfully')
     @api.response(404, 'Place not found')
     @api.response(400, 'Invalid input data')
+    @api.response(403, 'Forbidden: You are not the owner of this place')
+    @jwt_required()
     def put(self, place_id):
         """Update a place's information"""
         place_data = api.payload
         place = facade.get_place(place_id)
+
         if not place:
             return {'error': 'Place not found'}, 404
-
+        current_user = get_jwt_identity()
+        is_admin = current_user.get('is_admin', False)
+        user_id = current_user.get('id')
+        if not is_admin and place.owner_id != user_id:
+            return {'error': 'Forbidden: You are not the owner of this place'}, 403
         try:
             facade.update_place(place_id, place_data)
             return {'message': 'Place updated successfully'}, 200
@@ -122,3 +129,26 @@ class PlaceReviewList(Resource):
         if not place:
             return {'error': 'Place not found'}, 404
         return [review.to_dict() for review in place.reviews], 200
+
+@api.route('/places/<place_id>')
+class PlaceResource(Resource):
+    @api.response(200, 'Place deleted successfully')
+    @api.response(404, 'Place not found')
+    @api.response(403, 'Forbidden: You are not the owner of this place')
+    @jwt_required()
+    def delete(self, place_id):
+        """Delete a place"""        
+        place = facade.get_place(place_id)
+        if not place:
+            return {'error': 'Place not found'}, 404        
+        current_user = get_jwt_identity()
+        is_admin = current_user.get('is_admin', False)
+        user_id = current_user.get('id')
+        if not is_admin and place.owner_id != user_id:
+            return {'error': 'Forbidden: You are not the owner of this place'}, 403
+
+        try:
+            facade.delete_place(place_id)
+            return {'message': 'Place deleted successfully'}, 200
+        except Exception as e:
+            return {'error': str(e)}, 400
