@@ -9,16 +9,14 @@ class TestUserAPI(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Utilise la configuration de base
-        cls.app = create_app()  # ou create_app('config.Config') si ta config de base s'appelle ainsi
-        cls.app.config['TESTING'] = True  # Active le mode test
+        cls.app = create_app()
+        cls.app.config['TESTING'] = True
         cls.client = cls.app.test_client()
         with cls.app.app_context():
             db.create_all()
 
     @classmethod
     def tearDownClass(cls):
-        # Nettoyage complet de la DB après l'exécution de tous les tests
         with cls.app.app_context():
             db.session.remove()
             db.drop_all()
@@ -28,14 +26,12 @@ class TestUserAPI(unittest.TestCase):
         Teste la création d'un utilisateur valide via l'API.
         Vérifie que le mot de passe est hashé et n'est pas renvoyé dans la réponse.
         """
-        # Données valides avec mot de passe
         user_data = {
             'first_name': 'Alice',
             'last_name': 'Wonderland',
             'email': 'alice@example.com',
             'password': 'secret'
         }
-        # Envoi d'une requête POST vers l'endpoint de création d'utilisateur
         response = self.client.post(
             '/api/v1/users/',
             data=json.dumps(user_data),
@@ -156,15 +152,13 @@ class TestUserAPI(unittest.TestCase):
         Teste la création d'un utilisateur admin via l'API.
         Vérifie que l'attribut 'is_admin' est bien défini à True pour un utilisateur admin.
         """
-        # Données valides pour un utilisateur admin
         admin_data = {
             'first_name': 'Admin',
             'last_name': 'User',
             'email': 'admin@example.com',
             'password': 'adminpassword',
-            'is_admin': True  # Spécifie que l'utilisateur est un admin
+            'is_admin': True
         }
-        # Envoi d'une requête POST vers l'endpoint de création d'utilisateur
         response = self.client.post(
             '/api/v1/users/',
             data=json.dumps(admin_data),
@@ -176,23 +170,20 @@ class TestUserAPI(unittest.TestCase):
         self.assertIn('message', data)
         self.assertEqual(data['message'], 'User successfully created')
 
-        # Vérification dans la base de données que l'utilisateur a bien été créé en tant qu'admin
         with self.app.app_context():
             created_user = db.session.get(User, data['id'])
             self.assertIsNotNone(created_user)
-            self.assertTrue(created_user.is_admin)  # L'attribut 'is_admin' doit être True
+            self.assertTrue(created_user.is_admin)
 
     def test_05_create_amenity_by_admin(self):
         """
         Teste la création d'une amenity par un administrateur.
         Vérifie que l'amenity est correctement créée lorsque l'admin a les privilèges.
         """
-        # Données d'amenity à créer
         amenity_data = {
             'name': 'Pool'
         }
 
-        # Création d'un admin pour l'authentification
         admin_data = {
             'first_name': 'Admin',
             'last_name': 'User',
@@ -200,7 +191,6 @@ class TestUserAPI(unittest.TestCase):
             'password': 'adminpass',
             'is_admin': True
         }
-        # Enregistrement de l'admin dans la base de données
         with self.app.app_context():
             admin = User(
                 first_name=admin_data['first_name'],
@@ -212,7 +202,6 @@ class TestUserAPI(unittest.TestCase):
             db.session.add(admin)
             db.session.commit()
 
-        # Connexion de l'admin pour récupérer le token
         login_data = {
             'email': 'adm@example.com',
             'password': 'adminpass'
@@ -226,7 +215,6 @@ class TestUserAPI(unittest.TestCase):
         login_data = login_response.get_json()
         token = login_data.get('access_token')
 
-        # Création de l'amenity avec le token d'admin
         response = self.client.post(
             '/api/v1/amenities/',
             data=json.dumps(amenity_data),
@@ -238,6 +226,71 @@ class TestUserAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertIn('id', data)
         self.assertIn('name', data)
- 
+
+    def test_06_update_amenity_by_admin(self):
+        """
+        Teste la mise à jour d'une amenity par un administrateur.
+        Vérifie que l'amenity est correctement mise à jour lorsque l'admin a les privilèges.
+        """
+        admin_data = {
+            'first_name': 'Admin',
+            'last_name': 'Amenity',
+            'email': 'admin_amenity@example.com',
+            'password': 'adminpass',
+            'is_admin': True
+        }
+        with self.app.app_context():
+            admin = User(
+                first_name=admin_data['first_name'],
+                last_name=admin_data['last_name'],
+                email=admin_data['email'],
+                is_admin=admin_data['is_admin']
+            )
+            admin.hash_password(admin_data['password'])
+            db.session.add(admin)
+            db.session.commit()
+        login_data = {
+            'email': 'admin_amenity@example.com',
+            'password': 'adminpass'
+        }
+        login_response = self.client.post(
+            '/api/v1/auth/login',
+            data=json.dumps(login_data),
+            content_type='application/json'
+        )
+        self.assertEqual(login_response.status_code, 200)
+        login_data = login_response.get_json()
+        token = login_data.get('access_token')
+        amenity_data = {
+            'name': 'Jacuzzi'
+        }
+        create_response = self.client.post(
+            '/api/v1/amenities/',
+            data=json.dumps(amenity_data),
+            content_type='application/json',
+            headers={'Authorization': f'Bearer {token}'}
+        )
+        self.assertEqual(create_response.status_code, 201)
+        created_amenity = create_response.get_json()
+        amenity_id = created_amenity['id']
+        update_data = {
+            'name': 'Luxury Jacuzzi'
+        }
+        update_response = self.client.put(
+            f'/api/v1/amenities/{amenity_id}',
+            data=json.dumps(update_data),
+            content_type='application/json',
+            headers={'Authorization': f'Bearer {token}'}
+        )        
+        self.assertEqual(update_response.status_code, 200)
+        update_result = update_response.get_json()
+        self.assertIn('message', update_result)
+        self.assertEqual(update_result['message'], 'Amenity updated successfully')
+        with self.app.app_context():
+            from app.models.amenity import Amenity
+            updated_amenity = db.session.get(Amenity, amenity_id)
+            self.assertEqual(updated_amenity.name, 'Luxury Jacuzzi')
+
+
 if __name__ == '__main__':
     unittest.main()
