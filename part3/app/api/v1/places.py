@@ -59,7 +59,7 @@ class PlaceResource(Resource):
     @api.response(404, 'Place not found')
     def get(self, place_id):
         """Get place details by ID"""
-        place = facade.get_place(place_id)
+        place = facade.get_places(place_id)
         if not place:
             return {'error': 'Place not found'}, 404
         return place.to_dict_list(), 200
