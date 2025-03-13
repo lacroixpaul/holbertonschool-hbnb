@@ -1,3 +1,4 @@
+from flask_jwt_extended import create_access_token
 from app.persistence.repository import SQLAlchemyRepository
 from app.persistence.user_repository import UserRepository
 from app.persistence.place_repository import PlaceRepository

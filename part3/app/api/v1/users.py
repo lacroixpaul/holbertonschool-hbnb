@@ -1,5 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from app.services import facade
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 api = Namespace('users', description='User operations')
 
@@ -8,8 +9,7 @@ user_model = api.model('User', {
     'first_name': fields.String(required=True, description='First name of the user'),
     'last_name': fields.String(required=True, description='Last name of the user'),
     'email': fields.String(required=True, description='Email of the user'),
-    'password': fields.String(required=True, description='Password of the user'),
-    'password': fields.String(required=True, description='Password of the user') 
+    'password': fields.String(required=True, description='Password of the user')
 })
 
 @api.route('/')
@@ -19,7 +19,6 @@ class UserList(Resource):
     @api.response(400, 'Email already registered')
     @api.response(400, 'Invalid input data')
     @api.response(400, 'Invalid password data')
-
     def post(self):
         """Register a new user"""
         user_data = api.payload
@@ -27,12 +26,16 @@ class UserList(Resource):
         if 'password' not in user_data or not user_data['password']:
             return {'error': 'Password is required'}, 400
 
+        existing_user = facade.get_user_by_email(user_data['email'])
+        if existing_user:
+            return {'error': 'Email already registered'}, 400
+
         try:
             new_user = facade.create_user(user_data)
-            return new_user.to_dict(), 201
+            return {'id': new_user.id, 'message': 'User successfully created'}, 201
         except Exception as e:
             return {'error': str(e)}, 400
-        
+
     @api.response(200, 'List of users retrieved successfully')
     def get(self):
         """Retrieve a list of users"""
@@ -54,13 +57,21 @@ class UserResource(Resource):
     @api.response(200, 'User updated successfully')
     @api.response(404, 'User not found')
     @api.response(400, 'Invalid input data')
+    @jwt_required()
     def put(self, user_id):
-        user_data = api.payload
-        user = facade.get_user(user_id)
-        if not user:
-            return {'error': 'User not found'}, 404
-        try:
-            facade.update_user(user_id, user_data)
-            return user.to_dict(), 200
-        except Exception as e:
-            return {'error': str(e)}, 400
+            """Update user information"""
+            current_user_id = get_jwt_identity()        
+            if current_user_id != user_id:
+                return {'error': 'Unauthorized action'}, 403
+            
+            user_data = api.payload        
+            if 'email' in user_data or 'password' in user_data:
+                return {'error': 'You cannot modify email or password.'}, 400        
+            user = facade.get_user(user_id)
+            if not user:
+                return {'error': 'User not found'}, 404        
+            try:
+                facade.update_user(user_id, user_data)
+                return {'message': 'User details updated successfully'}, 200
+            except Exception as e:
+                return {'error': str(e)}, 400

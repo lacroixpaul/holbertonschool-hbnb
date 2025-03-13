@@ -13,11 +13,13 @@ class User(BaseModel):
     is_admin = db.Column(db.Boolean, default=False)
 
     def hash_password(self, password):
-        """Hash the password before storing it."""
-        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
+        """Hashes the password before storing it."""
+        from app import bcrypt
+        return bcrypt.generate_password_hash(password).decode('utf-8')
 
     def verify_password(self, password):
-        """Verify if the given password matches the stored hash."""
+        """Verifies if the provided password matches the hashed password."""
+        from app import bcrypt
         return bcrypt.check_password_hash(self.password, password)
 
     @validates('email')
