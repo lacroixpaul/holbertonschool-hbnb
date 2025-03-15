@@ -22,9 +22,13 @@ class HBnBFacade:
         if 'password' not in user_data or not user_data['password']:
             raise ValueError("Password is required")
 
-        user_data['password'] = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
-        return self.user_repository.create_user(user_data)
-    
+        password = user_data.pop('password')
+        user = User(**user_data)
+        user.hash_password(password)
+        db.session.add(user)
+        db.session.commit()
+        return user
+        
     def get_users(self):
         return self.user_repository.get_all()
 
@@ -127,3 +131,16 @@ class HBnBFacade:
     def delete_review(self, review_id):
         """Deletes a review."""
         self.review_repository.delete(review_id)
+
+    def authenticate_user(self, email, password):
+        """Authenticate a user by email and password."""
+        user = self.get_user_by_email(email)
+        if user and user.verify_password(password):
+            return user
+        return None
+
+    def get_review_by_place_and_user(self, place_id, user_id):
+        """
+        Retrieve a review by place_id and user_id
+        """
+        return Review.query.filter_by(place_id=place_id, user_id=user_id).first()
