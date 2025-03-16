@@ -16,6 +16,7 @@ class HBnBFacade:
         self.place_repository = PlaceRepository()
         self.review_repository = ReviewRepository()
         self.amenity_repository = AmenityRepository()
+    
     # USER
     def create_user(self, user_data):
         """Creates a new user and hashes the password before saving."""
@@ -30,15 +31,19 @@ class HBnBFacade:
         return user
         
     def get_users(self):
+        """Retrieves all users."""
         return self.user_repository.get_all()
 
     def get_user(self, user_id):
+        """Retrieves a specific user by ID."""
         return self.user_repository.get(user_id)
 
     def get_user_by_email(self, email):
+        """Retrieves a user by email."""
         return self.user_repository.get_by_attribute('email', email)
     
     def update_user(self, user_id, user_data):
+        """Updates a user's details."""
         self.user_repository.update(user_id, user_data)
     
     # AMENITY
@@ -115,6 +120,10 @@ class HBnBFacade:
     def get_review(self, review_id):
         """Retrieves a specific review."""
         return self.review_repository.get(review_id)
+        
+    def get_review_by_id(self, review_id):
+        """Retrieves a specific review by ID."""
+        return self.review_repository.get(review_id)
 
     def get_all_reviews(self):
         """Retrieves all reviews."""
@@ -140,7 +149,5 @@ class HBnBFacade:
         return None
 
     def get_review_by_place_and_user(self, place_id, user_id):
-        """
-        Retrieve a review by place_id and user_id
-        """
+        """Retrieve a review by place_id and user_id."""
         return Review.query.filter_by(place_id=place_id, user_id=user_id).first()

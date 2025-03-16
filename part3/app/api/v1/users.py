@@ -54,8 +54,7 @@ class UserResource(Resource):
         return user.to_dict(), 200
 
     @api.expect(user_model)
-    @api.response(200, 'User updated successfully')
-    @api.response(404, 'User not found')
+    @api.response(200, 'User details updated successfully')
     @api.response(400, 'Invalid input data')
     @jwt_required()
     def put(self, user_id):

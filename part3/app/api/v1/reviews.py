@@ -64,7 +64,7 @@ class ReviewResource(Resource):
     def put(self, review_id):
         """Update a review's information"""
         review_data = api.payload
-        review = facade.get_review(review_id)
+        review = facade.get_review_by_id(review_id)
         if not review:
             return {'error': 'Review not found'}, 404
         current_user = get_jwt_identity()
